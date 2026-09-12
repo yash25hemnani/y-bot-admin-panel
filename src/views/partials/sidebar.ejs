@@ -1,0 +1,64 @@
+<%
+  var navItems = [
+    { label: "Dashboard", href: "/panel", icon: "view-dashboard-outline" },
+    { label: "Users", href: "/panel/users", icon: "account-multiple-outline" },
+    { label: "Settings", href: "/panel/settings", icon: "cog-outline" },
+  ];
+%>
+<div class="horizontal-menu">
+  <nav class="navbar top-navbar col-lg-12 col-12 p-0">
+    <div class="container-fluid">
+      <div class="navbar-menu-wrapper d-flex align-items-center justify-content-between">
+        <ul class="navbar-nav navbar-nav-left">
+          <li class="nav-item ms-0 me-5 d-lg-flex d-none">
+            <a href="#" class="nav-link horizontal-nav-left-menu"><i class="mdi mdi-format-list-bulleted"></i></a>
+          </li>
+          <li class="nav-item nav-search d-none d-lg-block ms-3">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text" id="search"><i class="mdi mdi-magnify"></i></span>
+              </div>
+              <input type="text" class="form-control" placeholder="search" aria-label="search" aria-describedby="search" />
+            </div>
+          </li>
+        </ul>
+        <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+          <a class="navbar-brand brand-logo" href="/panel"><img src="/assets/kapella/images/logo.svg" alt="Y-Bot Admin" /></a>
+          <a class="navbar-brand brand-logo-mini" href="/panel"><img src="/assets/kapella/images/logo-mini.svg" alt="Y-Bot Admin" /></a>
+        </div>
+        <ul class="navbar-nav navbar-nav-right">
+          <li class="nav-item nav-profile dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" id="profileDropdown">
+              <span class="nav-profile-name"><%= user ? user.username : "Guest" %></span>
+              <span class="online-status"></span>
+              <span class="nav-profile-initial"><%= (user && user.username) ? user.username.charAt(0).toUpperCase() : "?" %></span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
+              <a class="dropdown-item" href="/panel/logout">
+                <i class="mdi mdi-logout text-primary"></i>
+                Logout
+              </a>
+            </div>
+          </li>
+        </ul>
+        <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button" data-toggle="horizontal-menu-toggle">
+          <span class="mdi mdi-menu"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+  <nav class="bottom-navbar">
+    <div class="container">
+      <ul class="nav page-navigation">
+        <% navItems.forEach(function (item) { %>
+          <li class="nav-item <%= currentPath === item.href ? 'active' : '' %>">
+            <a class="nav-link" href="<%= item.href %>">
+              <i class="mdi mdi-<%= item.icon %> menu-icon"></i>
+              <span class="menu-title"><%= item.label %></span>
+            </a>
+          </li>
+        <% }); %>
+      </ul>
+    </div>
+  </nav>
+</div>

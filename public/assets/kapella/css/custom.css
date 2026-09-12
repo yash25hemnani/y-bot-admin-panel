@@ -1,0 +1,14 @@
+/* Project-specific tweaks on top of the Kapella template */
+
+.nav-profile-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 0.25rem;
+  background-color: #6851ff;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+}

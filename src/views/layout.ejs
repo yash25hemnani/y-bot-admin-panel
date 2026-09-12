@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title><%= title || "Y-Bot Admin" %></title>
+  <link rel="stylesheet" href="/assets/kapella/vendors/mdi/css/materialdesignicons.min.css" />
+  <link rel="stylesheet" href="/assets/kapella/vendors/base/vendor.bundle.base.css" />
+  <link rel="stylesheet" href="/assets/kapella/css/style.css" />
+  <link rel="stylesheet" href="/assets/kapella/css/custom.css" />
+  <link rel="shortcut icon" href="/assets/kapella/images/favicon.png" />
+</head>
+<body>
+  <div class="container-scroller">
+    <%- include("partials/sidebar") %>
+    <div class="container-fluid page-body-wrapper">
+      <div class="main-panel">
+        <div class="content-wrapper">
+          <%- include(bodyPath) %>
+        </div>
+        <%- include("partials/footer") %>
+      </div>
+    </div>
+  </div>
+  <script src="/assets/kapella/vendors/base/vendor.bundle.base.js"></script>
+  <script src="/assets/kapella/js/template.js"></script>
+</body>
+</html>
