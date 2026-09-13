@@ -1,9 +1,16 @@
 import { Request, Response } from "express";
 import { ApiResponse, AuthRequest } from "../types/api";
 import { handleApiError } from "../utils/api";
-import { Device } from "../db/models";
+import { Device, User } from "../db/models";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import {
+  buildPaginatedResponse,
+  getPaginationParams,
+} from "../utils/pagination";
+import { error } from "console";
+import { createAuditLog } from "../utils/audit";
+import { AuditAction, AuditResourceType } from "../db/models/AuditLog";
 
 export const addDevice = async (
   req: AuthRequest,
@@ -42,6 +49,12 @@ export const addDevice = async (
       hmacSecret,
       userId: req.user!.id,
     });
+
+    await createAuditLog(req, {
+      action: AuditAction.DEVICE_CREATED,
+      resourceType: AuditResourceType.DEVICE,
+      resourceId: newDevice.id,
+    })
 
     return res.status(201).json({
       success: true,
@@ -162,5 +175,160 @@ export const rotateHmacSecret = async (
     });
   } catch (error) {
     return handleApiError(res, error, "Refresh failed!");
+  }
+};
+
+export const getDevices = async (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+) => {
+  try {
+    const { page, limit, offset } = getPaginationParams(req.query);
+    // If admin, send all devices
+    // If user, send user devices
+    const isAdmin = req.user?.role === "admin";
+
+    const { count, rows: devices } = await Device.findAndCountAll({
+      where: isAdmin ? {} : { userId: req.user?.id },
+      include: [{ model: User, attributes: ["id", "username", "email"] }],
+      attributes: {
+        exclude: ["devicePasswordHash"],
+      },
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset,
+    });
+
+    return res
+      .status(200)
+      .json(buildPaginatedResponse(devices, count, { page, limit, offset }));
+  } catch (error) {
+    return handleApiError(res, error, "Could not get devices!");
+  }
+};
+
+export const getDevice = async (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+) => {
+  try {
+    const { id } = req.params;
+
+    const device = await Device.findOne({
+      where: { id, userId: req.user?.id },
+      include: [{ model: User, attributes: ["id", "username", "email"] }],
+      attributes: {
+        exclude: ["devicePasswordHash"],
+      },
+    });
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "DEVICE_NOT_FOUND",
+          message: "Device with this is does not exist!",
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: device.toJSON(),
+    });
+  } catch (error) {
+    return handleApiError(res, error, "Could not get devices!");
+  }
+};
+
+export const revokeDevice = async (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+) => {
+  try {
+    const { id } = req.params;
+    const isAdmin = req.user?.role === "admin";
+
+    const device = isAdmin
+      ? await Device.findByPk(id as string)
+      : await Device.findOne({
+          where: {
+            id,
+            userId: req.user?.id,
+          },
+        });
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "DEVICE_NOT_FOUND",
+          message: "Device not found.",
+        },
+      });
+    }
+
+    await Device.update(
+      { isRevoked: true, revokedAt: new Date() },
+      { where: { id } },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "The device was revoked successfully!",
+    });
+  } catch (error) {
+    return handleApiError(res, error, "Unable to revoke device.");
+  }
+};
+
+export const enableDevice = async (
+  req: AuthRequest,
+  res: Response<ApiResponse>,
+) => {
+  try {
+    const { id } = req.params;
+    const isAdmin = req.user?.role === "admin";
+
+    const device = await Device.findOne({
+      where: isAdmin
+        ? { id: id as string }
+        : {
+            id: id as string,
+            userId: req.user?.id,
+          },
+      attributes: {
+        exclude: ["devicePasswordHash"],
+      },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "username", "email"],
+        },
+      ],
+    });
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: "DEVICE_NOT_FOUND",
+          message: "Device not found.",
+        },
+      });
+    }
+
+    await Device.update(
+      { isRevoked: false, revokedAt: undefined },
+      { where: { id } },
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "The device was enabled successfully!",
+      data: device.toJSON(),
+    });
+  } catch (error) {
+    return handleApiError(res, error, "Unable to revoke device.");
   }
 };

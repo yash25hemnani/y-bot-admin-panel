@@ -5,6 +5,8 @@ import path from "path";
 import authRoutes from "./routes/auth.routes";
 import filesRoutes from "./routes/files.routes";
 import viewsRoutes from "./routes/views.routes";
+import { pinoHttp } from "pino-http";
+import { logger } from "./utils/logger";
 
 const app = express();
 
@@ -17,6 +19,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 app.use(cookieParser());
 app.use("/assets", express.static(path.join(__dirname, "..", "public", "assets")));
+
+
+app.use(
+  pinoHttp({
+    logger,
+  }),
+);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/files", filesRoutes);
