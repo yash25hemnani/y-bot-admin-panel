@@ -6,6 +6,7 @@ interface AuditParams {
   resourceType: AuditResourceType;
   resourceId?: string;
   metadata?: object;
+  userId?: string;
 }
 
 export async function createAuditLog(
@@ -13,7 +14,7 @@ export async function createAuditLog(
   params: AuditParams,
 ) {
   await AuditLog.create({
-    userId: req.user?.id ?? null,
+    userId: params.userId ?? req.user?.id ?? null,
     action: params.action,
     resourceType: params.resourceType,
     resourceId: params.resourceId ?? null,

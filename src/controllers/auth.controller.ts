@@ -9,6 +9,8 @@ import {
 } from "../utils/tokens";
 import { logger } from "../utils/logger";
 import { ENV } from "../config/env";
+import { createAuditLog } from "../utils/audit";
+import { AuditAction, AuditResourceType } from "../db/models/AuditLog";
 
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -57,6 +59,13 @@ export const handleSignup = async (
       secure: ENV.NODE_ENV === "production",
       sameSite: ENV.NODE_ENV === "production" ? "lax" : "none",
       maxAge: REFRESH_TOKEN_EXPIRY,
+    });
+
+    await createAuditLog(req, {
+      action: AuditAction.USER_CREATED,
+      resourceType: AuditResourceType.USER,
+      resourceId: newUser.id,
+      userId: newUser.id,
     });
 
     return res.status(201).json({
@@ -133,6 +142,12 @@ export const handleLogin = async (req: Request, res: Response<ApiResponse>) => {
       secure: ENV.NODE_ENV === "production",
       sameSite: ENV.NODE_ENV === "production" ? "lax" : "none",
       maxAge: REFRESH_TOKEN_EXPIRY,
+    });
+
+    await createAuditLog(req, {
+      action: AuditAction.LOGIN,
+      resourceType: AuditResourceType.AUTH,
+      userId: user.id,
     });
 
     return res.status(200).json({
@@ -246,10 +261,22 @@ export const handleLogout = async (
 
     // Revoke the token in database
     const hashed = hashToken(refreshToken);
+    const token = await RefreshToken.findOne({
+      where: { tokenHash: hashed },
+    });
+
     await RefreshToken.update(
       { isRevoked: true },
       { where: { tokenHash: hashed } },
     );
+
+    if (token) {
+      await createAuditLog(req, {
+        action: AuditAction.LOGOUT,
+        resourceType: AuditResourceType.AUTH,
+        userId: token.userId,
+      });
+    }
 
     // Clear cookie
     res.clearCookie("refreshToken", {

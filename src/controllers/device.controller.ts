@@ -110,6 +110,12 @@ export const removeDevice = async (
       },
     });
 
+    await createAuditLog(req, {
+      action: AuditAction.DEVICE_DELETED,
+      resourceType: AuditResourceType.DEVICE,
+      resourceId: device.id,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Device deleted successfully!",
@@ -273,6 +279,12 @@ export const revokeDevice = async (
       { where: { id } },
     );
 
+    await createAuditLog(req, {
+      action: AuditAction.DEVICE_REVOKED,
+      resourceType: AuditResourceType.DEVICE,
+      resourceId: device.id,
+    });
+
     return res.status(200).json({
       success: true,
       message: "The device was revoked successfully!",
@@ -322,6 +334,12 @@ export const enableDevice = async (
       { isRevoked: false, revokedAt: undefined },
       { where: { id } },
     );
+
+    await createAuditLog(req, {
+      action: AuditAction.DEVICE_ENABLED,
+      resourceType: AuditResourceType.DEVICE,
+      resourceId: device.id,
+    });
 
     return res.status(200).json({
       success: true,
