@@ -1,0 +1,16 @@
+<%# Expects: pager { page, totalPages }, params (the current filters as an object) %>
+<% if (pager.totalPages > 1) { %>
+  <nav class="pager" aria-label="Pages">
+    <% if (pager.page > 1) { %>
+      <a class="btn btn-secondary btn-sm" href="<%= h.query(Object.assign({}, params, { page: pager.page - 1 })) || '?' %>">Previous</a>
+    <% } else { %>
+      <span class="btn btn-secondary btn-sm" aria-disabled="true">Previous</span>
+    <% } %>
+    <span class="pager-status">Page <%= pager.page %> of <%= pager.totalPages %></span>
+    <% if (pager.page < pager.totalPages) { %>
+      <a class="btn btn-secondary btn-sm" href="<%= h.query(Object.assign({}, params, { page: pager.page + 1 })) %>">Next</a>
+    <% } else { %>
+      <span class="btn btn-secondary btn-sm" aria-disabled="true">Next</span>
+    <% } %>
+  </nav>
+<% } %>

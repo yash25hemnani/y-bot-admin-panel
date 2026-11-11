@@ -1,0 +1,28 @@
+<header class="page-header">
+  <div>
+    <h1>Activity</h1>
+    <p><%= admin ? "Sign-ins and device changes from every account." : "Your sign-ins and device changes." %></p>
+  </div>
+</header>
+
+<div class="toolbar">
+  <nav class="chips" aria-label="Filter activity">
+    <% filters.forEach(function (f) { %>
+      <a class="chip" href="/panel/activity<%= h.query({ type: f.key }) %>"<% if (type === f.key) { %> aria-current="true"<% } %>><%= f.label %></a>
+    <% }); %>
+  </nav>
+  <span class="toolbar-note"><%= h.plural(pager.total, "entry", "entries") %></span>
+</div>
+
+<% if (days.length === 0) { %>
+  <div class="empty">
+    <h2>Nothing here yet</h2>
+    <p><%= type === "all" ? "Sign-ins and device changes will show up here as they happen." : "No activity of this kind yet." %></p>
+    <% if (type !== "all") { %><a class="btn btn-secondary btn-sm" href="/panel/activity">Show all activity</a><% } %>
+  </div>
+<% } else { %>
+  <div class="activity-log">
+    <%- include("../partials/log", { days: days, compact: false }) %>
+  </div>
+  <%- include("../partials/pager", { pager: pager, params: { type: type } }) %>
+<% } %>

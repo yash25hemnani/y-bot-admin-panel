@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <title>Y-Bot</title>
+  <!-- A "Y" routed as circuit traces: two inputs meet at a via, one trace runs down to a pad -->
+  <path d="M8 7 L16 15 L24 7 M16 15 V24" stroke="#2DD4B4" stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"/>
+  <circle cx="8" cy="6" r="3.5" fill="#2DD4B4"/>
+  <circle cx="8" cy="6" r="1.4" fill="#0A111C"/>
+  <circle cx="24" cy="6" r="3.5" fill="#2DD4B4"/>
+  <circle cx="24" cy="6" r="1.4" fill="#0A111C"/>
+  <circle cx="16" cy="15" r="2.6" fill="#2DD4B4"/>
+  <circle cx="16" cy="15" r="1" fill="#0A111C"/>
+  <rect x="11.5" y="23" width="9" height="6" rx="1" fill="#2DD4B4"/>
+</svg>

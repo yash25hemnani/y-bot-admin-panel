@@ -1,0 +1,38 @@
+<%
+  var links = [
+    { key: "overview", label: "Overview", href: "/panel", icon: "layout-dashboard" },
+    { key: "devices", label: "Devices", href: "/panel/devices", icon: "cpu" },
+    { key: "activity", label: "Activity", href: "/panel/activity", icon: "activity" },
+  ];
+%>
+<header class="topbar">
+  <a class="brand" href="/panel">
+    <img src="/assets/img/mark.svg" alt="" width="28" height="28" />
+    Y-Bot
+  </a>
+
+  <nav class="segments" aria-label="Main">
+    <% links.forEach(function (link) { %>
+      <a class="segment" href="<%= link.href %>"<% if (nav === link.key) { %> aria-current="page"<% } %>>
+        <%- h.icon(link.icon) %><%= link.label %>
+      </a>
+    <% }); %>
+  </nav>
+
+  <div class="account">
+    <button class="account-button" type="button" data-toggle="account-menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account: <%= user.username %>">
+      <span class="avatar" aria-hidden="true"><%= user.username.charAt(0).toUpperCase() %></span>
+      <span class="account-name"><%= user.username %></span>
+      <%- h.icon("chevron-down") %>
+    </button>
+    <div class="menu" id="account-menu">
+      <div class="menu-heading">
+        <strong><%= user.username %><%= user.role === "admin" ? " (admin)" : "" %></strong>
+        <span><%= user.email %></span>
+      </div>
+      <form method="post" action="/panel/logout">
+        <button class="menu-item" type="submit"><%- h.icon("log-out") %>Log out</button>
+      </form>
+    </div>
+  </div>
+</header>

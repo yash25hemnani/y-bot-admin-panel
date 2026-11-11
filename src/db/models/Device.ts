@@ -13,7 +13,7 @@ interface DeviceAttributes {
   createdAt: Date;
   updatedAt: Date;
   isRevoked: boolean;
-  revokedAt: Date;
+  revokedAt: Date | null;
 }
 
 interface CreationAttributes extends Optional<
@@ -35,7 +35,7 @@ export class Device
   declare createdAt: Date;
   declare updatedAt: Date;
   declare isRevoked: boolean;
-  declare revokedAt: Date;
+  declare revokedAt: Date | null;
 
   declare user?: User;
 }
@@ -89,7 +89,7 @@ Device.init(
     },
     revokedAt: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true, // matches the migration; null until the device is revoked
     },
   },
   { sequelize, tableName: "devices" },

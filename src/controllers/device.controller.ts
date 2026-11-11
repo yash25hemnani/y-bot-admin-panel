@@ -11,6 +11,7 @@ import {
 import { error } from "console";
 import { createAuditLog } from "../utils/audit";
 import { AuditAction, AuditResourceType } from "../db/models/AuditLog";
+import { disconnectDevice } from "../ws/deviceSocket";
 
 export const addDevice = async (
   req: AuthRequest,
@@ -110,6 +111,8 @@ export const removeDevice = async (
       },
     });
 
+    disconnectDevice(device.deviceId, "deleted");
+
     await createAuditLog(req, {
       action: AuditAction.DEVICE_DELETED,
       resourceType: AuditResourceType.DEVICE,
@@ -131,10 +134,14 @@ export const rotateHmacSecret = async (
 ) => {
   try {
     const { deviceId } = req.params;
+    const isAdmin = req.user?.role === "admin";
 
-    const device = await Device.findOne({
-      where: { id: deviceId },
-    });
+    // Users may only rotate their own devices (same pattern as revokeDevice)
+    const device = isAdmin
+      ? await Device.findByPk(deviceId as string)
+      : await Device.findOne({
+          where: { id: deviceId, userId: req.user?.id },
+        });
 
     if (!device)
       return res.status(404).json({
@@ -167,6 +174,9 @@ export const rotateHmacSecret = async (
         },
       });
     }
+
+    // Old session was authenticated with the old secret; force a fresh login
+    disconnectDevice(device.deviceId, "secret rotated");
 
     const updatedDevice = updatedDevices[0];
 
@@ -278,6 +288,8 @@ export const revokeDevice = async (
       { isRevoked: true, revokedAt: new Date() },
       { where: { id } },
     );
+
+    disconnectDevice(device.deviceId, "revoked");
 
     await createAuditLog(req, {
       action: AuditAction.DEVICE_REVOKED,

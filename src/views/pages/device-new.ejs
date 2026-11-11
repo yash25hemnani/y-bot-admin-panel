@@ -1,0 +1,57 @@
+<a class="back-link" href="/panel/devices"><%- h.icon("chevron-down") %>Devices</a>
+
+<header class="page-header">
+  <div>
+    <h1>Register device</h1>
+    <p>You'll get a device ID and a secret key for the robot's firmware. The key is shown once.</p>
+  </div>
+</header>
+
+<form class="form-plate" method="post" action="/panel/devices" novalidate>
+  <div class="field">
+    <label class="label" for="deviceName">Name</label>
+    <input class="input" id="deviceName" name="deviceName" value="<%= values.deviceName %>" maxlength="64" required autofocus
+      <% if (errors.deviceName) { %>aria-invalid="true" aria-describedby="deviceName-error"<% } else { %>aria-describedby="deviceName-hint"<% } %> />
+    <% if (errors.deviceName) { %>
+      <span class="field-error" id="deviceName-error"><%- h.icon("circle-alert") %><%= errors.deviceName %></span>
+    <% } else { %>
+      <span class="hint" id="deviceName-hint">Something you'll recognise, like “Kitchen bot”.</span>
+    <% } %>
+  </div>
+
+  <fieldset class="field">
+    <legend class="label">Board</legend>
+    <div class="choices">
+      <div class="choice">
+        <input type="radio" id="board-esp32" name="deviceType" value="ESP32"<% if (values.deviceType !== "ARDUINO") { %> checked<% } %> />
+        <label for="board-esp32"><strong>ESP32</strong><span>Wi-Fi and Bluetooth built in</span></label>
+      </div>
+      <div class="choice">
+        <input type="radio" id="board-arduino" name="deviceType" value="ARDUINO"<% if (values.deviceType === "ARDUINO") { %> checked<% } %> />
+        <label for="board-arduino"><strong>Arduino</strong><span>Needs a network module</span></label>
+      </div>
+    </div>
+    <% if (errors.deviceType) { %>
+      <span class="field-error"><%- h.icon("circle-alert") %><%= errors.deviceType %></span>
+    <% } %>
+  </fieldset>
+
+  <div class="field">
+    <label class="label" for="devicePassword">Device password</label>
+    <div class="input-group">
+      <input class="input" id="devicePassword" name="devicePassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" required
+        <% if (errors.devicePassword) { %>aria-invalid="true" aria-describedby="devicePassword-error"<% } else { %>aria-describedby="devicePassword-hint"<% } %> />
+      <button class="btn btn-ghost btn-icon" type="button" data-reveal="devicePassword" aria-pressed="false" aria-label="Show password"><%- h.icon("eye") %></button>
+    </div>
+    <% if (errors.devicePassword) { %>
+      <span class="field-error" id="devicePassword-error"><%- h.icon("circle-alert") %><%= errors.devicePassword %></span>
+    <% } else { %>
+      <span class="hint" id="devicePassword-hint">At least 8 characters. You'll need it if you ever delete the device.</span>
+    <% } %>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Register device</button>
+    <a class="btn btn-ghost" href="/panel/devices">Cancel</a>
+  </div>
+</form>

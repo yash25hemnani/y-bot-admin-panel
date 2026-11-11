@@ -1,0 +1,15 @@
+<%# Activity grouped by day. Expects: days, compact (hide IPs) %>
+<% days.forEach(function (day) { %>
+  <section class="log-day">
+    <h3 class="log-date"><%= day.label %></h3>
+    <ol class="log<%= compact ? ' log-compact' : '' %>" role="list">
+      <% day.entries.forEach(function (entry) { %>
+        <li class="log-entry" data-kind="<%= entry.kind %>">
+          <time class="log-time" datetime="<%= new Date(entry.createdAt).toISOString() %>" title="<%= h.fullTime(entry.createdAt) %>"><%= h.clockTime(entry.createdAt) %></time>
+          <span class="log-text"><strong><%= entry.isSelf ? "You" : entry.who %></strong> <%= entry.text.charAt(0).toLowerCase() + entry.text.slice(1) %></span>
+          <% if (!compact) { %><span class="log-ip mono"><%= entry.ip || "" %></span><% } %>
+        </li>
+      <% }); %>
+    </ol>
+  </section>
+<% }); %>

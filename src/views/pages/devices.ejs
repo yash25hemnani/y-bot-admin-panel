@@ -1,0 +1,63 @@
+<%
+  var filters = [
+    { key: "all", label: "All", count: counts.total },
+    { key: "online", label: "Online", count: counts.online },
+    { key: "offline", label: "Offline", count: counts.offline },
+    { key: "revoked", label: "Switched off", count: counts.revoked },
+  ];
+  var params = { q: search, status: status, page: pager.page > 1 ? pager.page : null };
+  var returnTo = "/panel/devices" + h.query(params);
+%>
+<header class="page-header">
+  <div>
+    <h1>Devices</h1>
+    <p><%= admin ? "Every robot on this server. Switch one off to disconnect it." : "Your robots. Switch one off to disconnect it." %></p>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/panel/devices/new"><%- h.icon("plus") %>Register device</a>
+  </div>
+</header>
+
+<% if (notice) { %>
+  <div class="alert alert-<%= notice.tone %> page-alert" role="status"><%- h.icon(notice.tone === "success" ? "check" : "triangle-alert") %><div><%= notice.text %></div></div>
+<% } %>
+
+<% if (!hasAnyDevice) { %>
+  <div class="empty">
+    <h2>No devices yet</h2>
+    <p>Register a robot to get its device ID and secret key. It can connect once the key is in its firmware.</p>
+    <a class="btn btn-secondary btn-sm" href="/panel/devices/new">Register device</a>
+  </div>
+<% } else { %>
+
+  <div class="toolbar">
+    <nav class="chips" aria-label="Filter by status">
+      <% filters.forEach(function (f) { %>
+        <a class="chip" href="/panel/devices<%= h.query({ q: search, status: f.key }) %>"<% if (status === f.key) { %> aria-current="true"<% } %>>
+          <%= f.label %> <span class="chip-count"><%= f.count %></span>
+        </a>
+      <% }); %>
+    </nav>
+    <form class="search" method="get" action="/panel/devices" role="search">
+      <% if (status !== "all") { %><input type="hidden" name="status" value="<%= status %>" /><% } %>
+      <label class="visually-hidden" for="device-search">Search devices by name</label>
+      <%- h.icon("search") %>
+      <input class="input" id="device-search" type="search" name="q" value="<%= search %>" placeholder="Search by name" />
+    </form>
+  </div>
+
+  <% if (devices.length === 0) { %>
+    <div class="empty">
+      <h2>No devices match</h2>
+      <p>Nothing<%= search ? ' named like “' + search + '”' : '' %> is <%= status === "all" ? "registered" : status === "revoked" ? "switched off" : status %> right now.</p>
+      <a class="btn btn-secondary btn-sm" href="/panel/devices">Clear filters</a>
+    </div>
+  <% } else { %>
+    <ul class="desk" role="list">
+      <% devices.forEach(function (device) { %>
+        <%- include("../partials/unit", { device: device, admin: admin, returnTo: returnTo }) %>
+      <% }); %>
+    </ul>
+    <%- include("../partials/pager", { pager: pager, params: { q: search, status: status } }) %>
+  <% } %>
+<% } %>

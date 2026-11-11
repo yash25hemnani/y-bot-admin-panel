@@ -1,0 +1,109 @@
+<% var on = device.status !== "revoked"; %>
+<a class="back-link" href="/panel/devices"><%- h.icon("chevron-down") %>Devices</a>
+
+<header class="faceplate">
+  <div class="faceplate-title">
+    <span class="lamp lamp-lg" data-state="<%= device.status %>" aria-hidden="true"></span>
+    <div>
+      <h1><%= device.name %></h1>
+      <p class="faceplate-meta">
+        <span class="status-text" data-state="<%= device.status %>"><%= device.status === "online" ? "Connected now" : device.status === "revoked" ? "Switched off" : "Not connected" %></span>
+        <span class="tag"><%= device.type %></span>
+        <% if (admin && device.owner) { %><span class="muted"><%= device.owner %></span><% } %>
+      </p>
+    </div>
+  </div>
+  <form class="switch-form" method="post" action="/panel/devices/<%= device.id %>/<%= on ? 'revoke' : 'enable' %>"
+    <% if (on) { %>data-confirm="Switch off “<%= device.name %>”? It will be disconnected and can't sign in until you switch it back on."<% } %>>
+    <span class="switch-label" id="allow-label">Allowed to connect</span>
+    <button class="switch switch-lg" type="submit" role="switch" aria-checked="<%= on %>" aria-labelledby="allow-label"><span class="switch-thumb"></span></button>
+  </form>
+</header>
+
+<% if (newSecret) { %>
+  <section class="secret-box" aria-labelledby="secret-heading">
+    <h2 id="secret-heading"><%= secretReason === "created" ? "Device registered. Copy its key now" : "New key created. Copy it now" %></h2>
+    <p>Put both values in the robot's firmware. The key won't be shown again<%= secretReason === "rotated" ? ", and the old key has stopped working" : "" %>.</p>
+    <div class="secret-fields">
+      <div class="field">
+        <span class="label" id="new-id-label">Device ID</span>
+        <div class="secret">
+          <span class="secret-value" id="new-device-id" aria-labelledby="new-id-label"><%= device.deviceId %></span>
+          <button class="btn btn-ghost btn-icon" type="button" data-copy-from="new-device-id" aria-label="Copy device ID">
+            <svg class="icon" data-when="idle" aria-hidden="true"><use href="/assets/img/icons.svg#i-copy"></use></svg>
+            <svg class="icon" data-when="copied" aria-hidden="true"><use href="/assets/img/icons.svg#i-check"></use></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" id="new-key-label">Secret key</span>
+        <div class="secret">
+          <span class="secret-value" id="new-key" aria-labelledby="new-key-label"><%= newSecret %></span>
+          <button class="btn btn-ghost btn-icon" type="button" data-copy-from="new-key" aria-label="Copy secret key">
+            <svg class="icon" data-when="idle" aria-hidden="true"><use href="/assets/img/icons.svg#i-copy"></use></svg>
+            <svg class="icon" data-when="copied" aria-hidden="true"><use href="/assets/img/icons.svg#i-check"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+<% } %>
+
+<% if (notice) { %>
+  <div class="alert alert-<%= notice.tone %> page-alert" role="status"><%- h.icon(notice.tone === "success" ? "check" : "triangle-alert") %><div><%= notice.text %></div></div>
+<% } %>
+
+<section class="plate" aria-label="Details">
+  <dl class="details">
+    <div>
+      <dt>Device ID</dt>
+      <dd class="details-copy">
+        <span class="mono" id="device-id"><%= device.deviceId %></span>
+        <button class="btn btn-ghost btn-icon" type="button" data-copy-from="device-id" aria-label="Copy device ID">
+          <svg class="icon" data-when="idle" aria-hidden="true"><use href="/assets/img/icons.svg#i-copy"></use></svg>
+          <svg class="icon" data-when="copied" aria-hidden="true"><use href="/assets/img/icons.svg#i-check"></use></svg>
+        </button>
+      </dd>
+    </div>
+    <div><dt>Board</dt><dd><%= device.type %></dd></div>
+    <% if (admin) { %><div><dt>Owner</dt><dd><%= device.owner %></dd></div><% } %>
+    <div><dt>Registered</dt><dd><%= h.fullTime(device.createdAt) %></dd></div>
+    <% if (device.revokedAt) { %><div><dt>Switched off</dt><dd><%= h.fullTime(device.revokedAt) %></dd></div><% } %>
+  </dl>
+  <div class="plate-row">
+    <div>
+      <h2>Secret key</h2>
+      <p>Lost the key, or think someone else has it? Issue a new one. The robot goes offline until its firmware has the new key.</p>
+    </div>
+    <% if (on) { %>
+      <form method="post" action="/panel/devices/<%= device.id %>/rotate"
+        data-confirm="Give “<%= device.name %>” a new key? The current key stops working straight away.">
+        <button class="btn btn-secondary" type="submit"><%- h.icon("key-round") %>Issue new key</button>
+      </form>
+    <% } else { %>
+      <span class="btn btn-secondary" aria-disabled="true"><%- h.icon("key-round") %>Switch on first</span>
+    <% } %>
+  </div>
+</section>
+
+<section class="danger-zone" aria-labelledby="delete-heading">
+  <form method="post" action="/panel/devices/<%= device.id %>/delete"
+    data-confirm="Delete “<%= device.name %>” for good? This can't be undone.">
+    <h2 id="delete-heading">Delete device</h2>
+    <p>Removes the device and its key for good. Enter the device password you set when registering it.</p>
+    <div class="field">
+      <label class="label" for="delete-password">Device password</label>
+      <div class="input-group">
+        <input class="input" id="delete-password" name="devicePassword" type="password" autocomplete="off" required
+          <% if (deleteError) { %>aria-invalid="true" aria-describedby="delete-error" autofocus<% } %> />
+        <button class="btn btn-ghost btn-icon" type="button" data-reveal="delete-password" aria-pressed="false" aria-label="Show password"><%- h.icon("eye") %></button>
+      </div>
+      <% if (deleteError) { %>
+        <span class="field-error" id="delete-error"><%- h.icon("circle-alert") %><%= deleteError %></span>
+      <% } %>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-danger" type="submit"><%- h.icon("trash-2") %>Delete device</button>
+    </div>
+  </form>
+</section>

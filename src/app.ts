@@ -7,11 +7,13 @@ import filesRoutes from "./routes/files.routes";
 import viewsRoutes from "./routes/views.routes";
 import { pinoHttp } from "pino-http";
 import { logger } from "./utils/logger";
+import * as viewHelpers from "./utils/view-helpers";
 
 const app = express();
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+app.locals.h = viewHelpers; // formatting helpers for EJS views
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -1,0 +1,55 @@
+<%# The title is the live state of the fleet, set wide: the page's headline. %>
+<header class="page-header">
+  <div>
+    <h1>
+      <% if (counts.total === 0) { %>No devices yet
+      <% } else { %><%= counts.online %> of <%= h.plural(counts.total, "device") %> connected<% } %>
+    </h1>
+    <% if (counts.total > 0) { %>
+      <p>
+        <%= counts.offline %> offline, <%= counts.revoked %> switched off<% if (admin) { %>, across <%= h.plural(accounts, "account") %><% } %>.
+      </p>
+    <% } %>
+  </div>
+  <div class="page-actions">
+    <a class="btn btn-primary" href="/panel/devices/new"><%- h.icon("plus") %>Register device</a>
+  </div>
+</header>
+
+<% if (notice) { %>
+  <div class="alert alert-<%= notice.tone %> page-alert" role="status"><%- h.icon(notice.tone === "success" ? "check" : "triangle-alert") %><div><%= notice.text %></div></div>
+<% } %>
+
+<div class="overview">
+  <section aria-labelledby="desk-heading">
+    <div class="section-header">
+      <h2 id="desk-heading">Devices</h2>
+      <% if (counts.total > devices.length) { %><a href="/panel/devices">All <%= counts.total %> devices</a><% } %>
+    </div>
+    <% if (devices.length === 0) { %>
+      <div class="empty">
+        <h2>Register your first device</h2>
+        <p>Each robot gets its own ID and secret key. Register it here, then put the key in its firmware.</p>
+        <a class="btn btn-secondary btn-sm" href="/panel/devices/new">Register device</a>
+      </div>
+    <% } else { %>
+      <ul class="desk" role="list">
+        <% devices.forEach(function (device) { %>
+          <%- include("../partials/unit", { device: device, admin: admin, returnTo: "/panel" }) %>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+
+  <section aria-labelledby="log-heading">
+    <div class="section-header">
+      <h2 id="log-heading">Activity</h2>
+      <% if (days.length) { %><a href="/panel/activity">See all</a><% } %>
+    </div>
+    <% if (days.length === 0) { %>
+      <p class="empty-quiet">Sign-ins and device changes will show up here.</p>
+    <% } else { %>
+      <%- include("../partials/log", { days: days, compact: true }) %>
+    <% } %>
+  </section>
+</div>

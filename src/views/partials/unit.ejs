@@ -1,0 +1,20 @@
+<%# One device row on the desk. Expects: device, admin, returnTo %>
+<% var on = device.status !== "revoked"; %>
+<li class="unit" data-state="<%= device.status %>">
+  <span class="lamp" data-state="<%= device.status %>" aria-hidden="true"></span>
+  <div>
+    <a class="unit-name" href="/panel/devices/<%= device.id %>"><%= device.name %></a>
+    <p class="unit-meta">
+      <span class="status-text" data-state="<%= device.status %>"><%= h.STATUS_LABEL[device.status] %></span>
+      <span class="tag"><%= device.type %></span>
+      <% if (admin && device.owner) { %><span class="owner"><%= device.owner %></span><% } %>
+    </p>
+  </div>
+  <span class="unit-when">Added <%- h.time(device.createdAt) %></span>
+  <form class="switch-form" method="post" action="/panel/devices/<%= device.id %>/<%= on ? 'revoke' : 'enable' %>"
+    <% if (on) { %>data-confirm="Switch off “<%= device.name %>”? It will be disconnected and can't sign in until you switch it back on."<% } %>>
+    <input type="hidden" name="returnTo" value="<%= returnTo %>" />
+    <button class="switch" type="submit" role="switch" aria-checked="<%= on %>" aria-label="Allow <%= device.name %> to connect"><span class="switch-thumb"></span></button>
+    <span class="switch-label" aria-hidden="true"><%= on ? "On" : "Off" %></span>
+  </form>
+</li>
