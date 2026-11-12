@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { RefreshToken, User } from "../db/models";
-import { AuthRequest } from "../types/api";
+import { AuthRequest } from "../types/api.types";
+import { PanelUser } from "../types/panel.types";
 import { hashToken } from "../utils/tokens";
 
 // The panel is server-rendered, so it can't hold a Bearer token like API clients do.
@@ -8,13 +9,6 @@ import { hashToken } from "../utils/tokens";
 // httpOnly cookie scoped to /panel, and looks the user up on each request.
 export const PANEL_COOKIE = "ybot_panel";
 export const PANEL_SESSION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-export interface PanelUser {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-}
 
 export async function loadPanelUser(req: AuthRequest, res: Response, next: NextFunction) {
   res.locals.user = null;

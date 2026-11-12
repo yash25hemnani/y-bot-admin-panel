@@ -1,4 +1,4 @@
-import { ApiResponse } from "../types/api";
+import { ApiResponse } from "../types/api.types";
 import { Response } from "express";
 import { logger } from "./logger";
 

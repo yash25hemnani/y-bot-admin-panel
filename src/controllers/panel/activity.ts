@@ -1,24 +1,31 @@
 import { Response } from "express";
 import { AuditLog, User } from "../../db/models";
-import { AuthRequest } from "../../types/api";
+import { activityQuerySchema } from "../../schemas/panel.schema";
+import { ActivityFilter } from "../../types/activity.types";
+import { AuthRequest } from "../../types/api.types";
 import { getPaginationParams } from "../../utils/pagination";
-import { groupByDay } from "../../utils/view-helpers";
-import { describeLogs, isAdmin, ownedBy, renderPage } from "./shared";
+import {
+  describeLogs,
+  groupByDay,
+  isAdmin,
+  ownedBy,
+  renderPage,
+  toPager,
+} from "../../helpers/panel.helpers";
 
 // Filter chips, like the history screen in the mobile app
-export const ACTIVITY_FILTERS = [
+const ACTIVITY_FILTERS: readonly ActivityFilter[] = [
   { key: "all", label: "All" },
   { key: "auth", label: "Sign-ins" },
   { key: "device", label: "Devices" },
   { key: "user", label: "Accounts" },
-] as const;
+];
 
-type FilterKey = (typeof ACTIVITY_FILTERS)[number]["key"];
-
+// GET /panel/activity: the audit log grouped by day, with type filter and pages
 export const renderActivity = async (req: AuthRequest, res: Response) => {
-  const requested = String(req.query.type ?? "all");
-  const type: FilterKey = ACTIVITY_FILTERS.some((f) => f.key === requested) ? (requested as FilterKey) : "all";
-  const { page, limit, offset } = getPaginationParams({ page: req.query.page, limit: 25 });
+  const query = activityQuerySchema.parse(req.query);
+  const { type } = query;
+  const { page, limit, offset } = getPaginationParams({ page: query.page, limit: 25 });
 
   const where = { ...ownedBy(req), ...(type === "all" ? {} : { resourceType: type }) };
 
@@ -35,6 +42,6 @@ export const renderActivity = async (req: AuthRequest, res: Response) => {
     filters: ACTIVITY_FILTERS,
     type,
     days: groupByDay(await describeLogs(req, rows)),
-    pager: { page, totalPages: Math.max(1, Math.ceil(count / limit)), total: count },
+    pager: toPager(page, count, limit),
   });
 };

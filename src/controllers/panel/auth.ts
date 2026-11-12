@@ -4,8 +4,8 @@ import { ENV } from "../../config/env";
 import { RefreshToken, User } from "../../db/models";
 import { AuditAction, AuditResourceType } from "../../db/models/AuditLog";
 import { PANEL_COOKIE, PANEL_SESSION_MS } from "../../middleware/panel.middleware";
-import { loginSchema } from "../../schemas/auth.schema";
-import { AuthRequest } from "../../types/api";
+import { panelLoginSchema, panelLoginValuesSchema } from "../../schemas/panel.schema";
+import { AuthRequest } from "../../types/api.types";
 import { createAuditLog } from "../../utils/audit";
 import { generateRefreshToken, hashToken } from "../../utils/tokens";
 
@@ -20,14 +20,16 @@ const cookieOptions = {
   path: "/panel",
 };
 
+// GET /panel/login: the sign-in form
 export const renderLogin = (req: AuthRequest, res: Response) => {
   if (req.user) return res.redirect(303, "/panel");
   res.render("login", { error: null, email: "" });
 };
 
+// POST /panel/login: check the password, start a session and set the panel cookie
 export const panelLogin = async (req: AuthRequest, res: Response) => {
-  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
-  const parsed = loginSchema.safeParse({ ...req.body, email });
+  const { email } = panelLoginValuesSchema.parse(req.body ?? {});
+  const parsed = panelLoginSchema.safeParse(req.body ?? {});
 
   if (!parsed.success) {
     return res.status(400).render("login", { error: "Enter your email address and password.", email });
@@ -59,6 +61,7 @@ export const panelLogin = async (req: AuthRequest, res: Response) => {
   return res.redirect(303, "/panel");
 };
 
+// POST /panel/logout: end the session and clear the panel cookie
 export const panelLogout = async (req: AuthRequest, res: Response) => {
   const raw = req.cookies?.[PANEL_COOKIE];
   if (typeof raw === "string" && raw) {

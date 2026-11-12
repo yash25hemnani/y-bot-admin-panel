@@ -2,74 +2,92 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { Response } from "express";
 import { Op, WhereOptions } from "sequelize";
-import { z } from "zod";
 import { Device, User } from "../../db/models";
 import { AuditAction, AuditResourceType } from "../../db/models/AuditLog";
-import { AuthRequest } from "../../types/api";
+import {
+  DeviceStatusFilter,
+  RegisterDeviceFieldErrors,
+  deleteDeviceBodySchema,
+  deviceListQuerySchema,
+  deviceNoticeQuerySchema,
+  deviceParamsSchema,
+  registerDeviceSchema,
+  registerDeviceValuesSchema,
+  returnToBodySchema,
+} from "../../schemas/panel.schema";
+import { AuthRequest } from "../../types/api.types";
+import { DevicePageExtras } from "../../types/device.types";
 import { createAuditLog } from "../../utils/audit";
 import { getPaginationParams } from "../../utils/pagination";
+import { generateHmacSecret } from "../../utils/tokens";
 import {
   countDevices,
-  disconnect,
-  isAdmin,
+  noticeFor,
   onlineIds,
+  toDeviceView,
+} from "../../helpers/device.helpers";
+import {
+  isAdmin,
   ownedBy,
   renderNotFound,
   renderPage,
-  safeReturnTo,
-  toDeviceView,
-  withNotice,
-} from "./shared";
+  toPager,
+} from "../../helpers/panel.helpers";
+import { disconnectDevice } from "../../ws/deviceSocket";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const BOARDS = ["ESP32", "ARDUINO"] as const;
-const STATUS_FILTERS = ["all", "online", "offline", "revoked"] as const;
-type StatusFilter = (typeof STATUS_FILTERS)[number];
+// Only same-site panel paths, so a crafted form can't redirect anywhere else
+function safeReturnTo(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  if (
+    !value.startsWith("/panel") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  )
+    return fallback;
+  return value;
+}
 
-const registerSchema = z.object({
-  deviceName: z
-    .string()
-    .trim()
-    .min(1, "Give the device a name.")
-    .max(64, "Keep the name to 64 characters or fewer."),
-  deviceType: z.enum(BOARDS, { error: "Choose the board this device uses." }),
-  devicePassword: z
-    .string()
-    .min(8, "Use at least 8 characters.")
-    .max(128, "Keep the password to 128 characters or fewer."),
-});
+// Add ?notice= to a path so the next page shows a message
+function withNotice(path: string, notice: string): string {
+  const url = new URL(path, "http://panel.local");
+  url.searchParams.set("notice", notice);
+  return url.pathname + url.search;
+}
 
-type FieldErrors = Partial<Record<"deviceName" | "deviceType" | "devicePassword", string>>;
-
-// Messages shown after a redirect, keyed by ?notice=
-export const NOTICES: Record<string, { tone: "success" | "warning"; text: string }> = {
-  revoked: { tone: "warning", text: "Device switched off. It was disconnected and can't sign in until you switch it back on." },
-  enabled: { tone: "success", text: "Device switched on. It can sign in again with its current key." },
-  "rotate-revoked": { tone: "warning", text: "Switch this device on before giving it a new key." },
-  deleted: { tone: "success", text: "Device deleted." },
-};
-
+// Escape LIKE wildcards so a search for "50%" matches literally
 const escapeLike = (text: string) => text.replace(/[\\%_]/g, "\\$&");
 
-async function findDevice(req: AuthRequest, id: string) {
-  if (!UUID.test(id)) return null;
-  return Device.findOne({
+// A device by primary key, with its owner, if this user may see it
+const loadDevice = (req: AuthRequest, id: string) =>
+  Device.findOne({
     where: { id, ...ownedBy(req) },
     include: [{ model: User, as: "user", attributes: ["username"] }],
   });
+
+// The device from :id, if the id is valid, the device exists and this user may see it
+async function findDevice(req: AuthRequest) {
+  const params = deviceParamsSchema.safeParse(req.params);
+  return params.success ? loadDevice(req, params.data.id) : null;
 }
 
+// Where to go after a device action: the form's returnTo, else the device page
+const returnPath = (req: AuthRequest, device: Device) =>
+  safeReturnTo(
+    returnToBodySchema.parse(req.body ?? {}).returnTo,
+    `/panel/devices/${device.id}`,
+  );
+
+// Render the device page; `extra` carries a new secret or a delete error
 function renderDevice(
   req: AuthRequest,
   res: Response,
   device: Device,
-  extra: { newSecret?: string; secretReason?: "created" | "rotated"; deleteError?: string } = {},
+  extra: DevicePageExtras = {},
 ) {
-  const notice = typeof req.query.notice === "string" ? NOTICES[req.query.notice] ?? null : null;
   renderPage(res, "device", device.deviceName, "devices", {
     admin: isAdmin(req),
     device: toDeviceView(device),
-    notice,
+    notice: noticeFor(deviceNoticeQuerySchema.parse(req.query).notice),
     newSecret: null,
     secretReason: null,
     deleteError: null,
@@ -77,26 +95,27 @@ function renderDevice(
   });
 }
 
-// ---------- List ----------
-
+// GET /panel/devices: search, status tabs and pages
 export const listDevices = async (req: AuthRequest, res: Response) => {
-  const requested = String(req.query.status ?? "all");
-  const status: StatusFilter = (STATUS_FILTERS as readonly string[]).includes(requested)
-    ? (requested as StatusFilter)
-    : "all";
-  const search = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 64) : "";
-  const { page, limit, offset } = getPaginationParams({ page: req.query.page, limit: 20 });
+  const query = deviceListQuerySchema.parse(req.query);
+  const { status, q: search } = query;
+  const { page, limit, offset } = getPaginationParams({
+    page: query.page,
+    limit: 20,
+  });
 
   const searchWhere: WhereOptions = search
     ? { deviceName: { [Op.iLike]: `%${escapeLike(search)}%` } }
     : {};
 
   const ids = onlineIds();
-  const statusWhere: Record<StatusFilter, WhereOptions> = {
+  const statusWhere: Record<DeviceStatusFilter, WhereOptions> = {
     all: {},
     revoked: { isRevoked: true },
     online: { isRevoked: false, deviceId: { [Op.in]: ids } },
-    offline: ids.length ? { isRevoked: false, deviceId: { [Op.notIn]: ids } } : { isRevoked: false },
+    offline: ids.length
+      ? { isRevoked: false, deviceId: { [Op.notIn]: ids } }
+      : { isRevoked: false },
   };
 
   const admin = isAdmin(req);
@@ -105,29 +124,28 @@ export const listDevices = async (req: AuthRequest, res: Response) => {
     Device.findAndCountAll({
       where: { ...ownedBy(req), ...searchWhere, ...statusWhere[status] },
       attributes: { exclude: ["devicePasswordHash", "hmacSecret"] },
-      include: admin ? [{ model: User, as: "user", attributes: ["username"] }] : [],
+      include: admin
+        ? [{ model: User, as: "user", attributes: ["username"] }]
+        : [],
       order: [["createdAt", "DESC"]],
       limit,
       offset,
     }),
   ]);
 
-  const notice = typeof req.query.notice === "string" ? NOTICES[req.query.notice] ?? null : null;
-
   renderPage(res, "devices", "Devices", "devices", {
     admin,
     status,
     search,
     counts,
-    notice,
+    notice: noticeFor(query.notice),
     hasAnyDevice: (await Device.count({ where: ownedBy(req) })) > 0,
     devices: rows.map(toDeviceView),
-    pager: { page, totalPages: Math.max(1, Math.ceil(count / limit)), total: count },
+    pager: toPager(page, count, limit),
   });
 };
 
-// ---------- Register ----------
-
+// GET /panel/devices/new: the empty registration form
 export const renderNewDevice = (req: AuthRequest, res: Response) => {
   renderPage(res, "device-new", "Register device", "devices", {
     values: { deviceName: "", deviceType: "ESP32" },
@@ -135,17 +153,15 @@ export const renderNewDevice = (req: AuthRequest, res: Response) => {
   });
 };
 
+// POST /panel/devices: validate, create the device and show its secret once
 export const registerDevice = async (req: AuthRequest, res: Response) => {
-  const values = {
-    deviceName: typeof req.body?.deviceName === "string" ? req.body.deviceName : "",
-    deviceType: typeof req.body?.deviceType === "string" ? req.body.deviceType : "ESP32",
-  };
-  const parsed = registerSchema.safeParse(req.body ?? {});
-  const errors: FieldErrors = {};
+  const values = registerDeviceValuesSchema.parse(req.body ?? {});
+  const parsed = registerDeviceSchema.safeParse(req.body ?? {});
+  const errors: RegisterDeviceFieldErrors = {};
 
   if (!parsed.success) {
     for (const issue of parsed.error.issues) {
-      const field = issue.path[0] as keyof FieldErrors;
+      const field = issue.path[0] as keyof RegisterDeviceFieldErrors;
       errors[field] ??= issue.message;
     }
   } else {
@@ -157,11 +173,14 @@ export const registerDevice = async (req: AuthRequest, res: Response) => {
 
   if (!parsed.success || Object.keys(errors).length) {
     res.status(400);
-    return renderPage(res, "device-new", "Register device", "devices", { values, errors });
+    return renderPage(res, "device-new", "Register device", "devices", {
+      values,
+      errors,
+    });
   }
 
   const { deviceName, deviceType, devicePassword } = parsed.data;
-  const hmacSecret = crypto.randomBytes(32).toString("hex");
+  const hmacSecret = generateHmacSecret();
 
   const created = await Device.create({
     deviceName,
@@ -179,26 +198,29 @@ export const registerDevice = async (req: AuthRequest, res: Response) => {
     metadata: { deviceName },
   });
 
-  const device = await findDevice(req, created.id);
+  const device = await loadDevice(req, created.id);
   res.status(201);
-  return renderDevice(req, res, device!, { newSecret: hmacSecret, secretReason: "created" });
+  return renderDevice(req, res, device!, {
+    newSecret: hmacSecret,
+    secretReason: "created",
+  });
 };
 
-// ---------- One device ----------
-
+// GET /panel/devices/:id: one device
 export const showDevice = async (req: AuthRequest, res: Response) => {
-  const device = await findDevice(req, String(req.params.id));
+  const device = await findDevice(req);
   if (!device) return renderNotFound(res);
   return renderDevice(req, res, device);
 };
 
+// POST /panel/devices/:id/revoke: switch the device off and disconnect it
 export const revokeDevice = async (req: AuthRequest, res: Response) => {
-  const device = await findDevice(req, String(req.params.id));
+  const device = await findDevice(req);
   if (!device) return renderNotFound(res);
 
   if (!device.isRevoked) {
     await device.update({ isRevoked: true, revokedAt: new Date() });
-    disconnect(device.deviceId, "revoked");
+    disconnectDevice(device.deviceId, "revoked");
     await createAuditLog(req, {
       action: AuditAction.DEVICE_REVOKED,
       resourceType: AuditResourceType.DEVICE,
@@ -206,12 +228,12 @@ export const revokeDevice = async (req: AuthRequest, res: Response) => {
       metadata: { deviceName: device.deviceName },
     });
   }
-  const back = safeReturnTo(req.body?.returnTo, `/panel/devices/${device.id}`);
-  return res.redirect(303, withNotice(back, "revoked"));
+  return res.redirect(303, withNotice(returnPath(req, device), "revoked"));
 };
 
+// POST /panel/devices/:id/enable: switch the device back on
 export const enableDevice = async (req: AuthRequest, res: Response) => {
-  const device = await findDevice(req, String(req.params.id));
+  const device = await findDevice(req);
   if (!device) return renderNotFound(res);
 
   if (device.isRevoked) {
@@ -223,41 +245,52 @@ export const enableDevice = async (req: AuthRequest, res: Response) => {
       metadata: { deviceName: device.deviceName },
     });
   }
-  const back = safeReturnTo(req.body?.returnTo, `/panel/devices/${device.id}`);
-  return res.redirect(303, withNotice(back, "enabled"));
+  return res.redirect(303, withNotice(returnPath(req, device), "enabled"));
 };
 
-// New HMAC key. The old one stops working at once, so the live connection is dropped.
-// (Not written to the audit log: AuditAction has no value for it yet.)
+// POST /panel/devices/:id/rotate: new HMAC key, old one dies at once (not audited: no AuditAction yet)
 export const rotateDeviceKey = async (req: AuthRequest, res: Response) => {
-  const device = await findDevice(req, String(req.params.id));
+  const device = await findDevice(req);
   if (!device) return renderNotFound(res);
-  if (device.isRevoked) return res.redirect(303, `/panel/devices/${device.id}?notice=rotate-revoked`);
+  if (device.isRevoked)
+    return res.redirect(
+      303,
+      `/panel/devices/${device.id}?notice=rotate-revoked`,
+    );
 
-  const hmacSecret = crypto.randomBytes(32).toString("hex");
+  const hmacSecret = generateHmacSecret();
   await device.update({ hmacSecret });
-  disconnect(device.deviceId, "key rotated");
+  disconnectDevice(device.deviceId, "key rotated");
 
-  return renderDevice(req, res, device, { newSecret: hmacSecret, secretReason: "rotated" });
+  return renderDevice(req, res, device, {
+    newSecret: hmacSecret,
+    secretReason: "rotated",
+  });
 };
 
-// Deleting needs the device password, the same rule as DELETE in the API
+// POST /panel/devices/:id/delete: needs the device password, the same rule as the API
 export const deleteDevice = async (req: AuthRequest, res: Response) => {
-  const device = await findDevice(req, String(req.params.id));
+  const device = await findDevice(req);
   if (!device) return renderNotFound(res);
 
-  const password = typeof req.body?.devicePassword === "string" ? req.body.devicePassword : "";
-  const valid = password.length > 0 && (await bcrypt.compare(password, device.devicePasswordHash));
+  const { devicePassword: password } = deleteDeviceBodySchema.parse(
+    req.body ?? {},
+  );
+  const valid =
+    password.length > 0 &&
+    (await bcrypt.compare(password, device.devicePasswordHash));
 
   if (!valid) {
     res.status(403);
     return renderDevice(req, res, device, {
-      deleteError: password ? "That password doesn't match this device." : "Enter the device password.",
+      deleteError: password
+        ? "That password doesn't match this device."
+        : "Enter the device password.",
     });
   }
 
   await device.destroy();
-  disconnect(device.deviceId, "deleted");
+  disconnectDevice(device.deviceId, "deleted");
   await createAuditLog(req, {
     action: AuditAction.DEVICE_DELETED,
     resourceType: AuditResourceType.DEVICE,

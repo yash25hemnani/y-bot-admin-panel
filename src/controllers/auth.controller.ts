@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import { RefreshToken, User } from "../db/models";
-import { ApiResponse } from "../types/api";
+import { ApiResponse } from "../types/api.types";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -14,6 +14,7 @@ import { AuditAction, AuditResourceType } from "../db/models/AuditLog";
 
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// POST /signup: create an account, then sign in with an access token and a refresh cookie
 export const handleSignup = async (
   req: Request,
   res: Response<ApiResponse>,
@@ -89,6 +90,7 @@ export const handleSignup = async (
   }
 };
 
+// POST /login: check the password and issue an access token and a refresh cookie
 export const handleLogin = async (req: Request, res: Response<ApiResponse>) => {
   try {
     const { email, password } = req.body;
@@ -171,6 +173,7 @@ export const handleLogin = async (req: Request, res: Response<ApiResponse>) => {
   }
 };
 
+// GET /refresh: swap a valid refresh cookie for a new access token
 export const handleRefresh = async (
   req: Request,
   res: Response<ApiResponse>,
@@ -244,6 +247,7 @@ export const handleRefresh = async (
   }
 };
 
+// POST /logout: revoke the refresh token and clear its cookie
 export const handleLogout = async (
   req: Request,
   res: Response<ApiResponse>,

@@ -3,7 +3,7 @@
    Theme copied from the Y-Bot mobile app (y_bot_app/lib/core/theme),
    so the panel and the app look like one product. */
 
-/* ---------- Font (self-hosted; helmet's CSP blocks font CDNs) ----------
+/* Font is self-hosted because helmet's CSP blocks font CDNs.
    Saira is one variable family with weight and width axes. Width carries the
    personality: wide for titles and device names, like lettering on a control
    panel; normal width for reading. */
@@ -17,8 +17,6 @@
   src: url("/assets/fonts/saira-latin-standard-normal.woff2") format("woff2-variations"),
     url("/assets/fonts/saira-latin-standard-normal.woff2") format("woff2");
 }
-
-/* ---------- Tokens ---------- */
 
 :root {
   color-scheme: dark;
@@ -92,8 +90,6 @@
   --duration: 160ms;
 }
 
-/* ---------- Reset ---------- */
-
 *,
 *::before,
 *::after {
@@ -143,8 +139,6 @@ table {
 [hidden] {
   display: none !important;
 }
-
-/* ---------- Base ---------- */
 
 body {
   min-height: 100vh;
@@ -224,8 +218,6 @@ samp {
   outline: none;
   box-shadow: var(--focus-ring);
 }
-
-/* ---------- Utilities ---------- */
 
 /* Machine values only: device IDs, secrets, IPs, timestamps */
 .mono {

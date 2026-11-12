@@ -28,3 +28,22 @@ export interface ApiResponse<T = any> {
   error?: ApiError;
   meta?: ApiMeta;
 }
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  offset: number;
+}
+
+export interface PaginatedResponse<T> {
+  success: true;
+  data: T[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}

@@ -81,8 +81,6 @@
   color: var(--primary);
 }
 
-/* ---------- Account menu ---------- */
-
 .account {
   position: relative;
   justify-self: end;
@@ -152,8 +150,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* ---------- Content + footer ---------- */
 
 .content {
   width: 100%;

@@ -18,6 +18,9 @@ export const generateRefreshToken = () => {
   return crypto.randomBytes(64).toString("hex"); // NOT JWT
 };
 
+// Shared secret a device signs its WebSocket login with
+export const generateHmacSecret = () => crypto.randomBytes(32).toString("hex");
+
 export const hashToken = (token: string) => {
   return crypto.createHash("sha256").update(token).digest("hex");
 };

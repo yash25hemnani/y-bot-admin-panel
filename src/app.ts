@@ -7,7 +7,7 @@ import filesRoutes from "./routes/files.routes";
 import viewsRoutes from "./routes/views.routes";
 import { pinoHttp } from "pino-http";
 import { logger } from "./utils/logger";
-import * as viewHelpers from "./utils/view-helpers";
+import * as viewHelpers from "./helpers/view.helpers";
 
 const app = express();
 

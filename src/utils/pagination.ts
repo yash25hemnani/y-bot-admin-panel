@@ -1,23 +1,4 @@
-// src/utils/pagination.ts
-
-export interface PaginationParams {
-  page: number;
-  limit: number;
-  offset: number;
-}
-
-export interface PaginatedResponse<T> {
-  success: true;
-  data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
+import { PaginatedResponse, PaginationParams } from "../types/api.types";
 
 // Utility function to extract pagination parameters from query
 export function getPaginationParams(

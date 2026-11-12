@@ -1,5 +1,5 @@
 import { NextFunction, Response } from "express";
-import { ApiResponse, AuthRequest } from "../types/api";
+import { ApiResponse, AuthRequest } from "../types/api.types";
 import { ENV } from "../config/env";
 
 export async function prodDeleteGuardMiddleware(

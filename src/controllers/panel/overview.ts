@@ -1,13 +1,20 @@
 import { Response } from "express";
 import { AuditLog, Device, User } from "../../db/models";
-import { AuthRequest } from "../../types/api";
-import { groupByDay } from "../../utils/view-helpers";
-import { NOTICES } from "./devices";
-import { countDevices, describeLogs, isAdmin, ownedBy, renderPage, toDeviceView } from "./shared";
+import { overviewQuerySchema } from "../../schemas/panel.schema";
+import { AuthRequest } from "../../types/api.types";
+import { countDevices, noticeFor, toDeviceView } from "../../helpers/device.helpers";
+import {
+  describeLogs,
+  groupByDay,
+  isAdmin,
+  ownedBy,
+  renderPage,
+} from "../../helpers/panel.helpers";
 
 const DESK_LIMIT = 8; // device rows on Overview; the rest are on the Devices page
 const STATUS_ORDER = { online: 0, offline: 1, revoked: 2 } as const;
 
+// GET /panel: device counts, the top devices and recent activity
 export const renderOverview = async (req: AuthRequest, res: Response) => {
   const admin = isAdmin(req);
 
@@ -39,6 +46,6 @@ export const renderOverview = async (req: AuthRequest, res: Response) => {
     accounts,
     devices: ranked.slice(0, DESK_LIMIT),
     days: groupByDay(await describeLogs(req, logs)),
-    notice: typeof req.query.notice === "string" ? NOTICES[req.query.notice] ?? null : null,
+    notice: noticeFor(overviewQuerySchema.parse(req.query).notice),
   });
 };

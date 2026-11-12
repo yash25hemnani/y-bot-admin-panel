@@ -1,5 +1,7 @@
 // Helpers available in every EJS view as `h` (set on app.locals in app.ts).
 
+import { DeviceStatus } from "../types/device.types";
+
 const ICON_SPRITE = "/assets/img/icons.svg";
 
 // Inline SVG from the sprite. Decorative: the text next to it carries the meaning.
@@ -62,25 +64,8 @@ export function dayLabel(value: Date | string): string {
   return date.getFullYear() === today.getFullYear() ? weekdayDayMonth.format(date) : dayMonthYear.format(date);
 }
 
-// Consecutive entries grouped under a day heading (entries arrive newest first)
-export function groupByDay<T extends { createdAt: Date }>(entries: T[]): { label: string; entries: T[] }[] {
-  const groups: { label: string; entries: T[] }[] = [];
-  for (const entry of entries) {
-    const label = dayLabel(entry.createdAt);
-    const last = groups[groups.length - 1];
-    if (last && last.label === label) last.entries.push(entry);
-    else groups.push({ label, entries: [entry] });
-  }
-  return groups;
-}
-
 export function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
-}
-
-// First 8 characters of an ID, for tables. The full value goes in a title/copy button.
-export function shortId(id: string | null | undefined): string {
-  return id ? id.slice(0, 8) : "";
 }
 
 // Build a query string from the current filters, dropping empty values
@@ -93,37 +78,8 @@ export function query(params: Record<string, string | number | undefined | null>
   return text ? `?${text}` : "";
 }
 
-export type DeviceStatus = "online" | "offline" | "revoked";
-
 export const STATUS_LABEL: Record<DeviceStatus, string> = {
   online: "Online",
   offline: "Offline",
   revoked: "Switched off",
 };
-
-// Audit log entry -> one plain sentence. `target` is the device name when known.
-export function describeActivity(action: string, target: string | null): string {
-  const device = target ? `“${target}”` : "a device that no longer exists";
-  switch (action) {
-    case "login":
-      return "Signed in";
-    case "logout":
-      return "Signed out";
-    case "device_created":
-      return `Registered ${device}`;
-    case "device_enabled":
-      return `Switched on ${device}`;
-    case "device_revoked":
-      return `Switched off ${device}`;
-    case "device_deleted":
-      return `Deleted ${device}`;
-    case "user_created":
-      return "Created an account";
-    case "user_updated":
-      return "Updated an account";
-    case "user_deleted":
-      return "Deleted an account";
-    default:
-      return action.replace(/_/g, " ");
-  }
-}

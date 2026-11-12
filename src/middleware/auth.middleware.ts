@@ -1,13 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { ENV } from "../config/env";
-import { ApiResponse, AuthRequest } from "../types/api";
+import { ApiResponse, AuthRequest } from "../types/api.types";
+import { TokenPayload } from "../types/auth.types";
 import { unauthorized } from "../utils/api";
-
-interface TokenPayload extends JwtPayload {
-  id: string;
-  role: string;
-}
 
 export function authMiddleware(requiredRole?: string) {
   return async function (

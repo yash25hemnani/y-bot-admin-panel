@@ -12,7 +12,7 @@ import {
   showDevice,
 } from "../controllers/panel/devices";
 import { renderOverview } from "../controllers/panel/overview";
-import { renderNotFound } from "../controllers/panel/shared";
+import { renderNotFound } from "../helpers/panel.helpers";
 import { loadPanelUser, requirePanelUser, sameOriginPost } from "../middleware/panel.middleware";
 
 const router = Router();

@@ -1,13 +1,6 @@
-import { AuditAction, AuditLog, AuditResourceType } from "../db/models/AuditLog";
-import { AuthRequest } from "../types/api";
-
-interface AuditParams {
-  action: AuditAction;
-  resourceType: AuditResourceType;
-  resourceId?: string;
-  metadata?: object;
-  userId?: string;
-}
+import { AuditLog } from "../db/models/AuditLog";
+import { AuditParams } from "../types/activity.types";
+import { AuthRequest } from "../types/api.types";
 
 export async function createAuditLog(
   req: AuthRequest,

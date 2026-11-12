@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ApiResponse, AuthRequest } from "../types/api";
+import { ApiResponse, AuthRequest } from "../types/api.types";
 import { handleApiError } from "../utils/api";
 import { Device, User } from "../db/models";
 import crypto from "crypto";
@@ -12,7 +12,9 @@ import { error } from "console";
 import { createAuditLog } from "../utils/audit";
 import { AuditAction, AuditResourceType } from "../db/models/AuditLog";
 import { disconnectDevice } from "../ws/deviceSocket";
+import { generateHmacSecret } from "../utils/tokens";
 
+// Register a device and return its id and HMAC secret (shown once)
 export const addDevice = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -39,7 +41,7 @@ export const addDevice = async (
 
     // Generate device ID and hmacSecret
     const deviceId = crypto.randomUUID();
-    const hmacSecret = crypto.randomBytes(32).toString("hex");
+    const hmacSecret = generateHmacSecret();
 
     // TODO - Add a check for uniqueness
     const newDevice = await Device.create({
@@ -71,6 +73,7 @@ export const addDevice = async (
   }
 };
 
+// Delete a device after checking its device password, and drop its live connection
 export const removeDevice = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -128,6 +131,7 @@ export const removeDevice = async (
   }
 };
 
+// Issue a new HMAC secret for a device; the old one stops working at once
 export const rotateHmacSecret = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -152,7 +156,7 @@ export const rotateHmacSecret = async (
         },
       });
 
-    const newHmacSecret = crypto.randomBytes(32).toString("hex");
+    const newHmacSecret = generateHmacSecret();
 
     const [updatedCount, updatedDevices] = await Device.update(
       { hmacSecret: newHmacSecret },
@@ -194,6 +198,7 @@ export const rotateHmacSecret = async (
   }
 };
 
+// List devices, paginated: all of them for admins, only your own otherwise
 export const getDevices = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -223,6 +228,7 @@ export const getDevices = async (
   }
 };
 
+// One device by id, if this user may see it
 export const getDevice = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -257,6 +263,7 @@ export const getDevice = async (
   }
 };
 
+// Switch a device off so it can't sign in, and drop its live connection
 export const revokeDevice = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
@@ -306,6 +313,7 @@ export const revokeDevice = async (
   }
 };
 
+// Switch a revoked device back on
 export const enableDevice = async (
   req: AuthRequest,
   res: Response<ApiResponse>,
