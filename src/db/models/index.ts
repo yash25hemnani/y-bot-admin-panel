@@ -25,6 +25,5 @@ User.hasMany(AuditLog, {
 // Exports
 export { User } from "./User";
 export { RefreshToken } from "./RefreshToken";
-export { UploadedFile } from "./UploadedFile";
 export { Device } from "./Device";
 export {AuditLog} from "./AuditLog";

@@ -3,7 +3,6 @@ import express from "express";
 import helmet from "helmet";
 import path from "path";
 import authRoutes from "./routes/auth.routes";
-import filesRoutes from "./routes/files.routes";
 import viewsRoutes from "./routes/views.routes";
 import { pinoHttp } from "pino-http";
 import { logger } from "./utils/logger";
@@ -30,7 +29,6 @@ app.use(
 );
 
 app.use("/api/auth", authRoutes);
-app.use("/api/files", filesRoutes);
 app.use("/panel", viewsRoutes);
 
 export default app;
