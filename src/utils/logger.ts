@@ -1,7 +1,8 @@
 import pino from "pino";
 
-export const logger = pino({
-    transport: {
-        target: "pino-pretty",
-    }
-})
+// Pretty output locally; plain JSON in production (pino-pretty is a dev dependency)
+export const logger = pino(
+  process.env.NODE_ENV === "production"
+    ? {}
+    : { transport: { target: "pino-pretty" } },
+);

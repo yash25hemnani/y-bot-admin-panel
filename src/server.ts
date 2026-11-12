@@ -7,7 +7,12 @@ import { attachDeviceSocket } from "./ws/deviceSocket";
 const startServer = async () => {
   await initDB();
 
-  const server = app.listen(ENV.PORT, () => {
+  // Express 5 calls this callback on failure too (e.g. EADDRINUSE), so check the error
+  const server = app.listen(ENV.PORT, (err?: Error) => {
+    if (err) {
+      logger.error(err, `Could not listen on port ${ENV.PORT}`);
+      process.exit(1);
+    }
     logger.info(`API running on http://localhost:${ENV.PORT}`);
   });
 

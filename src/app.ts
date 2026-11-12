@@ -10,6 +10,9 @@ import * as viewHelpers from "./helpers/view.helpers";
 
 const app = express();
 
+// Behind Render's proxy: use X-Forwarded-For for req.ip (audit logs) and the real protocol
+app.set("trust proxy", 1);
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.locals.h = viewHelpers; // formatting helpers for EJS views
@@ -21,6 +24,10 @@ app.use(helmet());
 app.use(cookieParser());
 app.use("/assets", express.static(path.join(__dirname, "..", "public", "assets")));
 
+// Cheap endpoint for Render's health check and the keep-alive pinger; above pino-http so pings aren't logged
+app.get("/health", (_req, res) => {
+  res.type("text").send("ok");
+});
 
 app.use(
   pinoHttp({

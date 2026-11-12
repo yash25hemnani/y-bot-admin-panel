@@ -19,11 +19,15 @@ export const ENV = {
     REFRESH_SECRET: required("REFRESH_SECRET"),
   },
 
-  DB: {
-    HOST: required("DB_HOST"),
-    PORT: Number(required("DB_PORT")),
-    NAME: required("DB_NAME"),
-    USER: required("DB_USER"),
-    PASS: required("DB_PASS"),
-  },
+  // Neon provides one connection string (DATABASE_URL); without it, use the separate DB_* parts
+  DB: process.env.DATABASE_URL
+    ? { URL: process.env.DATABASE_URL }
+    : {
+        URL: undefined,
+        HOST: required("DB_HOST"),
+        PORT: Number(required("DB_PORT")),
+        NAME: required("DB_NAME"),
+        USER: required("DB_USER"),
+        PASS: required("DB_PASS"),
+      },
 } as const;

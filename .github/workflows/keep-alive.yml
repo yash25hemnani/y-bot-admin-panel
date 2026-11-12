@@ -1,0 +1,21 @@
+# Pings the Render free web service every 5 minutes so it doesn't sleep (it sleeps after ~15 min idle,
+# which would disconnect the robots). Free for public repos.
+# Set the repo variable RENDER_URL (Settings -> Secrets and variables -> Actions -> Variables)
+# if the service URL differs from the default below.
+name: Keep Render awake
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: # allows a manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          URL: ${{ vars.RENDER_URL || 'https://y-bot-admin-panel.onrender.com' }}
+        # Retries cover a cold start if the service was already asleep
+        run: curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-all-errors --max-time 60 "$URL/health"

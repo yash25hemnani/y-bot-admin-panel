@@ -1,11 +1,9 @@
 const path = require("path");
 
-const isProduction = process.env.NODE_ENV === "prod";
-const base = isProduction ? "dist" : "src";
-
+// Config and migrations are plain JS that tsc doesn't copy to dist, so always read them from src
 module.exports = {
-  config: path.resolve(`${base}/db/config.js`),
-  "models-path": path.resolve(`${base}/db/models`),
-  "seeders-path": path.resolve(`${base}/db/seeders`),
-  "migrations-path": path.resolve(`${base}/db/migrations`),
+  config: path.resolve("src/db/config.js"),
+  "models-path": path.resolve("src/db/models"),
+  "seeders-path": path.resolve("src/db/seeders"),
+  "migrations-path": path.resolve("src/db/migrations"),
 };
